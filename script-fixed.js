@@ -132,6 +132,23 @@ class TodoApp {
         } else {
             console.error('Test mode button not found!');
         }
+
+        // Refresh button
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Refresh button clicked');
+                window.location.reload();
+            });
+            refreshBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Refresh button touched');
+                window.location.reload();
+            });
+        }
         
         
         
@@ -181,6 +198,87 @@ class TodoApp {
         
         // Day selector events
         this.bindDayButtons();
+        
+        // Weather expansion events
+        this.bindWeatherExpansionEvents();
+    }
+    
+    bindWeatherExpansionEvents() {
+        // Add event listeners for weather card expansion
+        const weatherDisplay = document.querySelector('.weather-display');
+        const weatherCurrent = document.querySelector('.weather-current');
+        const forecastView = document.querySelector('.weather-forecast-view');
+        
+        if (weatherDisplay && weatherCurrent && forecastView) {
+            let isExpanded = false;
+            let autoHideTimer = null;
+            
+            const showForecast = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                if (isExpanded) return;
+                
+                // Hide current weather content and remove grey background
+                weatherCurrent.style.display = 'none';
+                weatherDisplay.style.background = 'none';
+                weatherDisplay.style.border = 'none';
+                weatherDisplay.style.backdropFilter = 'none';
+                forecastView.classList.remove('hidden');
+                forecastView.classList.add('visible');
+                
+                isExpanded = true;
+                
+                // Set 10-second auto-hide timer
+                autoHideTimer = setTimeout(() => {
+                    hideForecast();
+                }, 10000);
+                
+                console.log('Forecast shown, auto-hide in 5 seconds');
+            };
+            
+            const hideForecast = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                if (!isExpanded) return;
+                
+                // Clear timer if manual hide
+                if (autoHideTimer) {
+                    clearTimeout(autoHideTimer);
+                    autoHideTimer = null;
+                }
+                
+                // Hide forecast and restore weather display styling
+                forecastView.classList.remove('visible');
+                forecastView.classList.add('hidden');
+                weatherCurrent.style.display = 'block';
+                weatherDisplay.style.background = 'rgba(255, 255, 255, 0.1)';
+                weatherDisplay.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+                weatherDisplay.style.backdropFilter = 'blur(10px)';
+                
+                isExpanded = false;
+                
+                console.log('Forecast hidden');
+            };
+            
+            // Make the weather card clickable
+            weatherDisplay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!isExpanded) {
+                    showForecast(e);
+                } else {
+                    hideForecast(e);
+                }
+            });
+            weatherDisplay.style.cursor = 'pointer';
+        }
     }
     
     bindDayButtons() {
@@ -1285,7 +1383,7 @@ class TodoApp {
             const location = 'London,England,UK'; // More specific location
             
             const response = await fetch(
-                `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${location}&days=1&aqi=no&alerts=no`
+                `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${location}&days=5&aqi=no&alerts=no`
             );
             
             if (!response.ok) {
@@ -1316,6 +1414,17 @@ class TodoApp {
             console.log('Remaining hours rain chances:', rainChances);
             console.log('Max rain chance for remaining hours:', maxRainChance);
             
+            // Process 5-day forecast
+            const forecast = data.forecast.forecastday.map(day => ({
+                date: day.date,
+                dayName: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
+                condition: day.day.condition.text,
+                icon: `https:${day.day.condition.icon}`,
+                maxTemp: Math.round(day.day.maxtemp_c),
+                minTemp: Math.round(day.day.mintemp_c),
+                rainChance: day.day.daily_chance_of_rain
+            }));
+
             this.weatherData = {
                 temperature: Math.round(data.current.temp_c),
                 feelsLike: Math.round(data.current.feelslike_c),
@@ -1324,7 +1433,8 @@ class TodoApp {
                 windSpeed: Math.round(data.current.wind_kph),
                 humidity: data.current.humidity,
                 rainChance: maxRainChance,
-                unit: '°C'
+                unit: '°C',
+                forecast: forecast
             };
             
             this.lastWeatherUpdate = now;
@@ -1381,8 +1491,40 @@ class TodoApp {
             rainElement.style.display = 'none';
         }
         
+        // Populate 5-day forecast
+        if (weather.forecast) {
+            this.populate5DayForecast(weather.forecast);
+        }
         
         console.log('Weather updated:', weather);
+    }
+
+    populate5DayForecast(forecastData) {
+        const forecastContainer = this.allDoneSection.querySelector('#forecastDaysContainer');
+        if (!forecastContainer) return;
+
+        forecastContainer.innerHTML = '';
+        
+        forecastData.forEach((day, index) => {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'forecast-day';
+            
+            const dayName = index === 0 ? 'Today' : day.dayName;
+            
+            dayElement.innerHTML = `
+                <div class="forecast-day-name">${dayName}</div>
+                <div class="forecast-day-condition">
+                    <img class="forecast-day-icon" src="${day.icon}" alt="${day.condition}">
+                    <span>${day.condition}</span>
+                </div>
+                <div class="forecast-day-temp">
+                    <span class="temp-high">${day.maxTemp}°</span>
+                    <span class="temp-low">${day.minTemp}°</span>
+                </div>
+            `;
+            
+            forecastContainer.appendChild(dayElement);
+        });
     }
 
     getDailyQuote() {

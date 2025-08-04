@@ -145,6 +145,7 @@
             <div class="viewer-header">
                 <div class="viewer-controls">
                     <button id="testMode" class="test-mode-btn" title="Test animation progression">🧪</button>
+                    <button id="refreshBtn" class="refresh-btn" title="Refresh page">🔄</button>
                     <button id="exitViewer" class="exit-viewer" title="Exit viewer mode">✕</button>
                 </div>
             </div>
@@ -167,11 +168,18 @@
                 <div id="allDoneSection" class="all-done-section hidden">
                     <div class="cat-container">
                         <div class="weather-display">
-                            <img class="weather-icon" src="" alt="Weather" style="display: none;">
-                            <div class="weather-temp">--°C</div>
-                            <div class="weather-condition">Loading...</div>
-                            <div class="weather-details">Feels like --°C</div>
-                            <div class="weather-rain" style="display: none;"></div>
+                            <div class="weather-current">
+                                <img class="weather-icon" src="" alt="Weather" style="display: none;">
+                                <div class="weather-temp">--°C</div>
+                                <div class="weather-condition">Loading...</div>
+                                <div class="weather-details">Feels like --°C</div>
+                                <div class="weather-rain" style="display: none;"></div>
+                            </div>
+                            <div class="weather-forecast-view hidden">
+                                <div class="forecast-days-container" id="forecastDaysContainer">
+                                    <!-- 5-day forecast will be populated here -->
+                                </div>
+                            </div>
                         </div>
                         <div class="all-done-text">
                         </div>
