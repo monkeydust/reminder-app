@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remindik</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Remindik</h1>
+            <div class="header-controls">
+                <button id="viewerToggle" class="viewer-toggle" title="Toggle viewer mode">👁️</button>
+            </div>
+        </div>
+        
+        <div class="input-section">
+            <input type="text" id="todoInput" placeholder="Enter your reminder..." maxlength="200">
+            <button id="addBtn">Once</button>
+            <button id="recurringBtn" class="recurring-btn">⟳ Recurring</button>
+        </div>
+        
+        <div id="recurringModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Set Recurring Reminder</h3>
+                    <button id="closeModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="recurringText">Reminder:</label>
+                        <input type="text" id="recurringText" placeholder="e.g., Take the bins out" maxlength="200">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recurringFreq">Repeat:</label>
+                        <select id="recurringFreq">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="daySelector">
+                        <label>Day of the week:</label>
+                        <div class="day-buttons">
+                            <button type="button" class="day-btn" data-day="0">Sun</button>
+                            <button type="button" class="day-btn" data-day="1">Mon</button>
+                            <button type="button" class="day-btn" data-day="2">Tue</button>
+                            <button type="button" class="day-btn" data-day="3">Wed</button>
+                            <button type="button" class="day-btn" data-day="4">Thu</button>
+                            <button type="button" class="day-btn" data-day="5">Fri</button>
+                            <button type="button" class="day-btn" data-day="6">Sat</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recurringTime">Time:</label>
+                        <input type="time" id="recurringTime" value="08:00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="startDate">Start date:</label>
+                        <input type="date" id="startDate">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancelRecurring" class="cancel-btn">Cancel</button>
+                    <button id="createRecurring" class="create-btn">Create Recurring Reminder</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Recurring Modal -->
+        <div id="editRecurringModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Recurring Reminder</h3>
+                    <button id="closeEditModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editRecurringText">Reminder:</label>
+                        <input type="text" id="editRecurringText" placeholder="e.g., Take the bins out" maxlength="200">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editRecurringFreq">Repeat:</label>
+                        <select id="editRecurringFreq">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="editDaySelector">
+                        <label>Day of the week:</label>
+                        <div class="day-buttons">
+                            <button type="button" class="day-btn edit-day-btn" data-day="0">Sun</button>
+                            <button type="button" class="day-btn edit-day-btn" data-day="1">Mon</button>
+                            <button type="button" class="day-btn edit-day-btn" data-day="2">Tue</button>
+                            <button type="button" class="day-btn edit-day-btn" data-day="3">Wed</button>
+                            <button type="button" class="day-btn edit-day-btn" data-day="4">Thu</button>
+                            <button type="button" class="day-btn edit-day-btn" data-day="5">Fri</button>
+                            <button type="button" class="day-btn edit-day-btn" data-day="6">Sat</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editRecurringTime">Time:</label>
+                        <div class="time-input-group">
+                            <button type="button" class="time-adjust-btn" id="editTimeMinusBtn" title="Subtract 15 minutes">−15min</button>
+                            <input type="time" id="editRecurringTime" value="08:00">
+                            <button type="button" class="time-adjust-btn" id="editTimePlusBtn" title="Add 15 minutes">+15min</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancelEditRecurring" class="cancel-btn">Cancel</button>
+                    <button id="saveEditRecurring" class="create-btn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="recurring-section">
+            <h2>Recurring Reminders</h2>
+            <ul id="recurringList"></ul>
+        </div>
+        
+        <div class="todo-list">
+            <h2>One-Time Reminders</h2>
+            <ul id="todoList"></ul>
+        </div>
+        
+        <div class="stats">
+            <span id="todoCount">0 reminders</span>
+            <button id="clearAllBtn">Clear All</button>
+        </div>
+    </div>
+    
+    <!-- Viewer Mode -->
+    <div id="viewerMode" class="viewer-mode hidden">
+        <div class="viewer-container">
+            <div class="viewer-header">
+                <div class="viewer-controls">
+                    <button id="testMode" class="test-mode-btn" title="Test animation progression">🧪</button>
+                    <button id="exitViewer" class="exit-viewer" title="Exit viewer mode">✕</button>
+                </div>
+            </div>
+            
+            <div class="viewer-content">
+                <div id="nextReminder" class="next-reminder">
+                    <div class="reminder-card">
+                        <div class="reminder-text"></div>
+                        <div class="reminder-details">
+                            <span class="reminder-time"></span>
+                            <span class="reminder-type"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="viewer-footer">
+                    <button id="doneBtn" class="done-btn hidden">DONE</button>
+                </div>
+                
+                <div id="allDoneSection" class="all-done-section hidden">
+                    <div class="cat-container">
+                        <div class="weather-display">
+                            <img class="weather-icon" src="" alt="Weather" style="display: none;">
+                            <div class="weather-temp">--°C</div>
+                            <div class="weather-condition">Loading...</div>
+                            <div class="weather-details">Feels like --°C</div>
+                            <div class="weather-rain" style="display: none;"></div>
+                        </div>
+                        <div class="all-done-text">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script-fixed.js"></script>
+</body>
+</html>

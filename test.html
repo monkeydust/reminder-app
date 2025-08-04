@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Todo App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input { padding: 10px; margin: 5px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .todo-item { padding: 10px; margin: 5px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Todo App</h1>
+        <input type="text" id="todoInput" placeholder="Enter task">
+        <button id="addBtn">Add Task</button>
+        <ul id="todoList"></ul>
+    </div>
+    
+    <script>
+        const todoInput = document.getElementById('todoInput');
+        const addBtn = document.getElementById('addBtn');
+        const todoList = document.getElementById('todoList');
+        let todos = [];
+        
+        function addTodo() {
+            const text = todoInput.value.trim();
+            if (text) {
+                todos.push({ id: Date.now(), text: text });
+                todoInput.value = '';
+                render();
+            }
+        }
+        
+        function render() {
+            todoList.innerHTML = '';
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = 'todo-item';
+                li.textContent = todo.text;
+                todoList.appendChild(li);
+            });
+        }
+        
+        addBtn.addEventListener('click', addTodo);
+        todoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTodo();
+        });
+    </script>
+</body>
+</html>
