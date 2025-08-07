@@ -133,22 +133,6 @@ class TodoApp {
             console.error('Test mode button not found!');
         }
 
-        // Refresh button
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Refresh button clicked');
-                window.location.reload();
-            });
-            refreshBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Refresh button touched');
-                window.location.reload();
-            });
-        }
         
         
         
@@ -1378,12 +1362,12 @@ class TodoApp {
                 return this.weatherData;
             }
 
-            // WeatherAPI.com API call for London current weather and forecast
-            const apiKey = '4c1eee587a154fdabd1213854250108';
-            const location = 'London,England,UK'; // More specific location
+            // Open-Meteo API call for London current weather and 5-day forecast
+            const latitude = 51.5074;  // London latitude
+            const longitude = -0.1278;  // London longitude
             
             const response = await fetch(
-                `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${location}&days=5&aqi=no&alerts=no`
+                `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weather_code&hourly=precipitation_probability&forecast_days=5&timezone=Europe/London`
             );
             
             if (!response.ok) {
@@ -1392,46 +1376,64 @@ class TodoApp {
             
             const data = await response.json();
             
-            // Debug: Log location being used
-            console.log('Weather API Location:', data.location.name, data.location.region, data.location.country);
+            // Debug: Log Open-Meteo API response
+            console.log('Open-Meteo API response for London:', data);
             
             // Calculate max rain chance for remaining hours of today
-            const todayForecast = data.forecast.forecastday[0];
-            const hourlyData = todayForecast.hour;
             const currentHour = new Date().getHours();
+            const todayHourlyData = data.hourly.precipitation_probability.slice(0, 24); // First 24 hours
             
             // Filter for remaining hours of the day
-            const remainingHours = hourlyData.filter(hour => {
-                const hourTime = new Date(hour.time_epoch * 1000).getHours();
-                return hourTime >= currentHour;
-            });
-            
-            const rainChances = remainingHours.map(hour => hour.chance_of_rain);
-            const maxRainChance = rainChances.length > 0 ? Math.max(...rainChances) : 0;
+            const remainingHours = todayHourlyData.slice(currentHour);
+            const maxRainChance = remainingHours.length > 0 ? Math.max(...remainingHours) : 0;
             
             // Debug: Log rain chances
             console.log('Current hour:', currentHour);
-            console.log('Remaining hours rain chances:', rainChances);
+            console.log('Remaining hours rain chances:', remainingHours);
             console.log('Max rain chance for remaining hours:', maxRainChance);
             
+            // Weather code to condition mapping (WMO codes)
+            const getWeatherCondition = (code) => {
+                if (code === 0) return 'Clear sky';
+                if (code <= 3) return 'Partly Cloudy';
+                if (code <= 48) return 'Foggy';
+                if (code <= 67) return 'Rain';
+                if (code <= 77) return 'Snow';
+                if (code <= 86) return 'Rain showers';
+                if (code <= 99) return 'Thunderstorms';
+                return 'Unknown';
+            };
+
+            // Weather code to icon URL mapping (using WeatherAPI icons for consistency)
+            const getWeatherIcon = (code) => {
+                if (code === 0) return 'https://cdn.weatherapi.com/weather/64x64/day/113.png'; // Clear
+                if (code <= 3) return 'https://cdn.weatherapi.com/weather/64x64/day/116.png'; // Partly cloudy
+                if (code <= 48) return 'https://cdn.weatherapi.com/weather/64x64/day/248.png'; // Fog
+                if (code <= 67) return 'https://cdn.weatherapi.com/weather/64x64/day/296.png'; // Rain
+                if (code <= 77) return 'https://cdn.weatherapi.com/weather/64x64/day/338.png'; // Snow
+                if (code <= 86) return 'https://cdn.weatherapi.com/weather/64x64/day/353.png'; // Showers
+                if (code <= 99) return 'https://cdn.weatherapi.com/weather/64x64/day/389.png'; // Thunder
+                return 'https://cdn.weatherapi.com/weather/64x64/day/113.png';
+            };
+            
             // Process 5-day forecast
-            const forecast = data.forecast.forecastday.map(day => ({
-                date: day.date,
-                dayName: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
-                condition: day.day.condition.text,
-                icon: `https:${day.day.condition.icon}`,
-                maxTemp: Math.round(day.day.maxtemp_c),
-                minTemp: Math.round(day.day.mintemp_c),
-                rainChance: day.day.daily_chance_of_rain
+            const forecast = data.daily.time.map((date, index) => ({
+                date: date,
+                dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+                condition: getWeatherCondition(data.daily.weather_code[index]),
+                icon: getWeatherIcon(data.daily.weather_code[index]),
+                maxTemp: Math.round(data.daily.temperature_2m_max[index]),
+                minTemp: Math.round(data.daily.temperature_2m_min[index]),
+                rainChance: 0 // Open-Meteo doesn't provide daily rain chance directly
             }));
 
             this.weatherData = {
-                temperature: Math.round(data.current.temp_c),
-                feelsLike: Math.round(data.current.feelslike_c),
-                condition: data.current.condition.text,
-                icon: `https:${data.current.condition.icon}`,
-                windSpeed: Math.round(data.current.wind_kph),
-                humidity: data.current.humidity,
+                temperature: Math.round(data.current.temperature_2m),
+                feelsLike: Math.round(data.current.apparent_temperature),
+                condition: getWeatherCondition(data.current.weather_code),
+                icon: getWeatherIcon(data.current.weather_code),
+                windSpeed: Math.round(data.current.wind_speed_10m),
+                humidity: data.current.relative_humidity_2m,
                 rainChance: maxRainChance,
                 unit: '°C',
                 forecast: forecast
@@ -1451,7 +1453,8 @@ class TodoApp {
                 windSpeed: '--',
                 humidity: '--',
                 rainChance: 0,
-                unit: '°C'
+                unit: '°C',
+                forecast: []
             };
         }
     }

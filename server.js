@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const url = require('url');
 
-const PORT = 3001;
+const PORT = 3002;
 const DATA_FILE = path.join(__dirname, 'reminders.json');
 
 // MIME types for different file extensions
