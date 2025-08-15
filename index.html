@@ -144,6 +144,7 @@
         <div class="viewer-container">
             <div class="viewer-header">
                 <div class="viewer-controls">
+                    <button id="fullscreenBtn" class="test-mode-btn" title="Toggle fullscreen">⛶</button>
                     <button id="testMode" class="test-mode-btn" title="Test animation progression">🧪</button>
                     <button id="exitViewer" class="exit-viewer" title="Exit viewer mode">✕</button>
                 </div>
@@ -173,6 +174,9 @@
                                 <div class="weather-condition">Loading...</div>
                                 <div class="weather-details">Feels like --°C</div>
                                 <div class="weather-rain" style="display: none;"></div>
+                                <div class="weather-uncertainty" style="display: none;">
+                                    <div class="uncertainty-range">Ensemble Range: <span class="temp-range">--</span></div>
+                                </div>
                             </div>
                             <div class="weather-forecast-view hidden">
                                 <div class="forecast-days-container" id="forecastDaysContainer">

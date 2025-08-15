@@ -1098,6 +1098,74 @@ h1 {
     display: none;
 }
 
+/* Weather uncertainty styling */
+.weather-uncertainty {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5vh;
+    font-size: 1.2vw;
+    max-font-size: 1.4rem;
+    color: #888;
+    gap: 2vw;
+}
+
+.uncertainty-range {
+    flex: 1;
+}
+
+.uncertainty-confidence {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5vw;
+}
+
+.confidence-label {
+    white-space: nowrap;
+}
+
+.confidence-bar {
+    flex: 1;
+    height: 0.8vh;
+    background: #333;
+    border-radius: 0.4vh;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444 0%, #ffaa44 50%, #44ff44 100%);
+    transition: width 0.5s ease;
+}
+
+.confidence-percent {
+    white-space: nowrap;
+    min-width: 3vw;
+    text-align: right;
+}
+
+/* Fullscreen button */
+.fullscreen-btn {
+    position: absolute;
+    top: 1vh;
+    right: 1vw;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 0.8vh 1.2vw;
+    border-radius: 0.5vh;
+    cursor: pointer;
+    font-size: 1.5vw;
+    max-font-size: 1.8rem;
+    z-index: 1000;
+    transition: background-color 0.3s ease;
+}
+
+.fullscreen-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
 /* Hide scrollbars on body when in viewer mode */
 body.viewer-active {
     -ms-overflow-style: none;  /* IE and Edge */

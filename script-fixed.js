@@ -113,6 +113,12 @@ class TodoApp {
             console.error('Exit viewer button not found!');
         }
         
+        // Fullscreen button event
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        }
+        
         this.doneBtn.addEventListener('click', () => this.completeViewerTask());
         
         if (this.testMode) {
@@ -901,6 +907,18 @@ class TodoApp {
         this.currentViewerTask = null;
         this.stopTimeUpdate();
     }
+    
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen().catch(err => {
+                console.log(`Error attempting to exit fullscreen: ${err.message}`);
+            });
+        }
+    }
 
     
     updateViewerContent() {
@@ -1366,15 +1384,30 @@ class TodoApp {
             const latitude = 51.5074;  // London latitude
             const longitude = -0.1278;  // London longitude
             
-            const response = await fetch(
+            // Regular forecast API
+            const forecastResponse = await fetch(
                 `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weather_code&hourly=precipitation_probability&forecast_days=5&timezone=Europe/London`
             );
             
-            if (!response.ok) {
-                throw new Error(`Weather API error: ${response.status}`);
+            // Ensemble API for current hour uncertainty
+            const ensembleResponse = await fetch(
+                `https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&forecast_days=1&timezone=Europe/London&models=ecmwf_aifs025`
+            );
+            
+            if (!forecastResponse.ok) {
+                throw new Error(`Weather API error: ${forecastResponse.status}`);
             }
             
-            const data = await response.json();
+            const data = await forecastResponse.json();
+            
+            // Get ensemble data for uncertainty
+            let ensembleData = null;
+            if (ensembleResponse.ok) {
+                ensembleData = await ensembleResponse.json();
+                console.log('Ensemble API response:', ensembleData);
+            } else {
+                console.warn('Ensemble API failed, continuing without uncertainty data');
+            }
             
             // Debug: Log Open-Meteo API response
             console.log('Open-Meteo API response for London:', data);
@@ -1427,6 +1460,59 @@ class TodoApp {
                 rainChance: 0 // Open-Meteo doesn't provide daily rain chance directly
             }));
 
+            // Calculate ensemble range from ensemble data for current hour
+            console.log('🔥 NEW ENSEMBLE CODE RUNNING - if you see this, code updated successfully');
+            let ensembleRange = null;
+            if (ensembleData && ensembleData.hourly) {
+                console.log('Ensemble data structure:', Object.keys(ensembleData.hourly));
+                
+                const currentHour = new Date().getHours();
+                const hourlyData = ensembleData.hourly;
+                
+                // Find the correct hour index by matching the time array
+                let hourIndex = currentHour;
+                if (hourlyData.time) {
+                    const currentTime = new Date();
+                    const todayStr = currentTime.toISOString().split('T')[0]; // YYYY-MM-DD
+                    const targetHour = `${todayStr}T${currentHour.toString().padStart(2, '0')}:00`;
+                    
+                    hourIndex = hourlyData.time.findIndex(timeStr => timeStr === targetHour);
+                    if (hourIndex === -1) {
+                        // Fallback to current hour if exact match not found
+                        hourIndex = Math.min(currentHour, hourlyData.time.length - 1);
+                    }
+                    console.log(`Looking for time: ${targetHour}, found at index: ${hourIndex}`);
+                }
+                
+                // Collect temperatures from all ensemble members
+                const memberTemps = [];
+                Object.keys(hourlyData).forEach(key => {
+                    if (key.startsWith('temperature_2m_member') && Array.isArray(hourlyData[key])) {
+                        const temp = hourlyData[key][hourIndex];
+                        if (temp !== undefined && temp !== null && !isNaN(temp)) {
+                            memberTemps.push(parseFloat(temp));
+                        }
+                    }
+                });
+                
+                console.log(`Found ${memberTemps.length} ensemble members for hour index ${hourIndex}`);
+                
+                if (memberTemps.length >= 10) { // Require reasonable number of members
+                    const tempMin = Math.min(...memberTemps);
+                    const tempMax = Math.max(...memberTemps);
+                    
+                    ensembleRange = {
+                        tempLow: Math.round(tempMin),
+                        tempHigh: Math.round(tempMax)
+                    };
+                    console.log(`Ensemble range: ${tempMin.toFixed(1)}°C - ${tempMax.toFixed(1)}°C from ${memberTemps.length} members`);
+                } else {
+                    console.log(`Insufficient ensemble members (${memberTemps.length}), skipping range display`);
+                }
+            } else {
+                console.log('No ensemble data available');
+            }
+
             this.weatherData = {
                 temperature: Math.round(data.current.temperature_2m),
                 feelsLike: Math.round(data.current.apparent_temperature),
@@ -1436,7 +1522,8 @@ class TodoApp {
                 humidity: data.current.relative_humidity_2m,
                 rainChance: maxRainChance,
                 unit: '°C',
-                forecast: forecast
+                forecast: forecast,
+                ensembleRange: ensembleRange
             };
             
             this.lastWeatherUpdate = now;
@@ -1483,7 +1570,12 @@ class TodoApp {
         }
         
         if (detailsElement) {
-            detailsElement.textContent = `Feels like ${weather.feelsLike}${weather.unit}`;
+            const todayForecast = weather.forecast && weather.forecast[0];
+            if (todayForecast) {
+                detailsElement.textContent = `Feels ${weather.feelsLike}° | Max ${todayForecast.maxTemp}° | Low ${todayForecast.minTemp}°`;
+            } else {
+                detailsElement.textContent = `Feels like ${weather.feelsLike}${weather.unit}`;
+            }
         }
         
         // Show rain probability only if there's a chance of rain
@@ -1493,6 +1585,9 @@ class TodoApp {
         } else if (rainElement) {
             rainElement.style.display = 'none';
         }
+
+        // Show ensemble range if available
+        this.updateEnsembleRangeDisplay(weather);
         
         // Populate 5-day forecast
         if (weather.forecast) {
@@ -1500,6 +1595,25 @@ class TodoApp {
         }
         
         console.log('Weather updated:', weather);
+    }
+
+    updateEnsembleRangeDisplay(weather) {
+        const uncertaintyElement = this.allDoneSection.querySelector('.weather-uncertainty');
+        const tempRangeElement = this.allDoneSection.querySelector('.temp-range');
+        
+        if (weather.ensembleRange && uncertaintyElement) {
+            const { tempLow, tempHigh } = weather.ensembleRange;
+            
+            // Update temperature range
+            if (tempRangeElement) {
+                tempRangeElement.textContent = `${tempLow}° - ${tempHigh}°`;
+            }
+            
+            uncertaintyElement.style.display = 'block';
+            console.log('Ensemble range displayed:', weather.ensembleRange);
+        } else if (uncertaintyElement) {
+            uncertaintyElement.style.display = 'none';
+        }
     }
 
     populate5DayForecast(forecastData) {
@@ -1617,4 +1731,7 @@ let todoApp;
 
 document.addEventListener('DOMContentLoaded', () => {
     todoApp = new TodoApp();
+    
+    // Auto-load viewer mode immediately
+    todoApp.enterViewerMode();
 });

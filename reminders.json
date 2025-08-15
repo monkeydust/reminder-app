@@ -1,4 +1,35 @@
 {
-  "todos": [],
-  "lastModified": 1754568365373
+  "todos": [
+    {
+      "id": 1754848109692,
+      "text": "Bins!",
+      "completed": true,
+      "isRecurring": true,
+      "frequency": "weekly",
+      "time": "19:00",
+      "days": [
+        3
+      ],
+      "startDate": "2025-08-11T00:00:00.000Z",
+      "nextDue": "2025-08-13T18:00:00.000Z",
+      "createdAt": "2025-08-10T17:48:29.693Z",
+      "completedAt": "2025-08-15T13:27:04.101Z"
+    },
+    {
+      "id": 1755264424102,
+      "text": "Bins!",
+      "completed": false,
+      "isRecurring": true,
+      "frequency": "weekly",
+      "time": "19:00",
+      "days": [
+        3
+      ],
+      "startDate": "2025-08-11T00:00:00.000Z",
+      "nextDue": "2025-08-20T18:00:00.000Z",
+      "createdAt": "2025-08-15T13:27:04.102Z",
+      "completedAt": null
+    }
+  ],
+  "lastModified": 1755274443811
 }
