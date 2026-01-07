@@ -7,6 +7,10 @@ class TodoApp {
         this.testInterval = null;
         this.weatherData = null;
         this.lastWeatherUpdate = 0;
+        this.selectedDays = [];
+        this.demoTask = null;
+        this.demoStage = 0;
+        this.demoStages = null;
         this.init();
     }
     
@@ -19,20 +23,40 @@ class TodoApp {
         // Sync with server on startup
         this.syncWithServer();
         
-        // Set up periodic sync every 30 seconds
+        // Set up periodic sync every 2 seconds for faster updates
         setInterval(() => {
             this.syncWithServer();
-        }, 30000);
+        }, 2000);
     }
     
     bindElements() {
         this.todoInput = document.getElementById('todoInput');
-        this.addBtn = document.getElementById('addBtn');
         this.todoList = document.getElementById('todoList');
         this.recurringList = document.getElementById('recurringList');
         this.todoCount = document.getElementById('todoCount');
         this.clearAllBtn = document.getElementById('clearAllBtn');
+        this.clearCompletedBtn = document.getElementById('clearCompletedBtn');
+        
+        // New segmented control elements
+        this.nowBtn = document.getElementById('nowBtn');
+        this.dateBtn = document.getElementById('dateBtn');
         this.recurringBtn = document.getElementById('recurringBtn');
+        
+        // Action buttons for each type
+        this.addNowBtn = document.getElementById('addNowBtn');
+        this.addDateBtn = document.getElementById('addDateBtn');
+        this.addRecurringBtn = document.getElementById('addRecurringBtn');
+        
+        // Date picker elements
+        this.scheduledDate = document.getElementById('scheduledDate');
+        this.scheduledTime = document.getElementById('scheduledTime');
+        
+        // Control containers
+        this.nowControls = document.getElementById('nowControls');
+        this.dateControls = document.getElementById('dateControls');
+        this.recurringControls = document.getElementById('recurringControls');
+        
+        // Existing modal elements
         this.recurringModal = document.getElementById('recurringModal');
         this.recurringText = document.getElementById('recurringText');
         this.recurringFreq = document.getElementById('recurringFreq');
@@ -82,15 +106,40 @@ class TodoApp {
         this.currentEditingId = null;
         this.originalTodos = null;
         this.quotes = null;
+        this.isCompletingTask = false; // Guard against rapid double-clicks
     }
     
     bindEvents() {
-        // Basic events
-        this.addBtn.addEventListener('click', () => this.addTodo());
-        this.todoInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addTodo();
+        // Segmented control events
+        this.nowBtn.addEventListener('click', () => this.switchReminderType('now'));
+        this.dateBtn.addEventListener('click', () => this.switchReminderType('date'));
+        this.recurringBtn.addEventListener('click', () => this.switchReminderType('recurring'));
+        
+        // Action button events
+        this.addNowBtn.addEventListener('click', () => this.addTodo());
+        this.addDateBtn.addEventListener('click', () => this.addScheduledReminder());
+        this.addRecurringBtn.addEventListener('click', () => this.addRecurringReminder());
+        
+        // Quick date button events
+        document.querySelectorAll('.quick-date').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleQuickDate(e));
         });
+        
+        // Recurring form events
+        this.recurringFreq.addEventListener('change', () => this.updateDaySelector());
+        
+        // Day selector button events
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.toggleDay(e));
+        });
+        
+        // Enter key support
+        this.todoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleEnterKey();
+        });
+        
         this.clearAllBtn.addEventListener('click', () => this.clearAll());
+        this.clearCompletedBtn.addEventListener('click', () => this.clearCompleted());
         
         // Viewer mode events
         this.viewerToggle.addEventListener('click', () => this.toggleViewerMode());
@@ -166,28 +215,11 @@ class TodoApp {
             }
         });
         
-        // Recurring task events
-        this.recurringBtn.addEventListener('click', () => this.openRecurringModal());
-        this.closeModal.addEventListener('click', () => this.closeRecurringModal());
-        this.cancelRecurring.addEventListener('click', () => this.closeRecurringModal());
-        this.createRecurring.addEventListener('click', () => this.createRecurringTask());
-        this.recurringFreq.addEventListener('change', () => this.updateDaySelector());
+        // Legacy modal event handlers removed - now using inline form
         
-        // Modal close on outside click
-        this.recurringModal.addEventListener('click', (e) => {
-            if (e.target === this.recurringModal) {
-                this.closeRecurringModal();
-            }
-        });
+        // Legacy modal click handlers removed
         
-        this.editRecurringModal.addEventListener('click', (e) => {
-            if (e.target === this.editRecurringModal) {
-                this.closeEditRecurringModal();
-            }
-        });
-        
-        // Day selector events
-        this.bindDayButtons();
+        // Legacy day selector events - removed to avoid conflicts
         
         // Weather expansion events
         this.bindWeatherExpansionEvents();
@@ -329,6 +361,241 @@ class TodoApp {
             this.render();
         }
     }
+
+    clearCompleted() {
+        // Prevent multiple rapid clicks
+        if (this.clearCompletedBtn.disabled) return;
+        
+        const completedTodos = this.todos.filter(todo => todo.completed);
+        
+        if (completedTodos.length === 0) {
+            alert('No completed reminders to clear!');
+            return;
+        }
+        
+        // Disable button temporarily
+        this.clearCompletedBtn.disabled = true;
+        
+        if (confirm(`Are you sure you want to clear ${completedTodos.length} completed reminder${completedTodos.length === 1 ? '' : 's'}?`)) {
+            this.todos = this.todos.filter(todo => !todo.completed);
+            this.saveTodos();
+            this.render();
+        }
+        
+        // Re-enable button after a short delay
+        setTimeout(() => {
+            this.clearCompletedBtn.disabled = false;
+        }, 500);
+    }
+
+    // New segmented control methods
+    switchReminderType(type) {
+        // Update active button
+        document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(type + 'Btn').classList.add('active');
+        
+        // Show appropriate controls
+        document.querySelectorAll('.creation-controls').forEach(control => control.classList.remove('active'));
+        document.getElementById(type + 'Controls').classList.add('active');
+        
+        // Set default date/time for date picker
+        if (type === 'date') {
+            this.setDefaultDateTime();
+        } else if (type === 'recurring') {
+            this.setDefaultStartDate();
+            this.updateDaySelector();
+        }
+        
+        // Update placeholder text based on type
+        const placeholders = {
+            now: 'Create a task for right now...',
+            date: 'Schedule a reminder for later...',
+            recurring: 'Set up a recurring reminder...'
+        };
+        this.todoInput.placeholder = placeholders[type];
+    }
+
+    setDefaultDateTime() {
+        // Set default date to today
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        this.scheduledDate.value = todayStr;
+        
+        // Set default time to next hour
+        const nextHour = new Date(today.getTime() + 60 * 60 * 1000);
+        const timeStr = nextHour.toTimeString().split(' ')[0].substring(0, 5);
+        this.scheduledTime.value = timeStr;
+    }
+
+    handleQuickDate(e) {
+        const btn = e.target;
+        const hours = btn.dataset.hours;
+        const dateType = btn.dataset.date;
+        
+        // Remove selected class from all quick date buttons
+        document.querySelectorAll('.quick-date').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        
+        const now = new Date();
+        let targetDate = new Date();
+        
+        if (hours) {
+            // Set time based on hours from now
+            targetDate = new Date(now.getTime() + parseInt(hours) * 60 * 60 * 1000);
+        } else if (dateType === 'today') {
+            targetDate = new Date(now);
+            targetDate.setHours(now.getHours() + 1, 0, 0, 0); // Next hour, on the hour
+        } else if (dateType === 'tomorrow') {
+            targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + 1);
+            targetDate.setHours(9, 0, 0, 0); // 9 AM tomorrow
+        } else if (dateType === 'weekend') {
+            targetDate = new Date(now);
+            const daysUntilSaturday = (6 - now.getDay()) % 7 || 7;
+            targetDate.setDate(now.getDate() + daysUntilSaturday);
+            targetDate.setHours(10, 0, 0, 0); // 10 AM Saturday
+        }
+        
+        // Update date and time inputs
+        this.scheduledDate.value = targetDate.toISOString().split('T')[0];
+        this.scheduledTime.value = targetDate.toTimeString().split(' ')[0].substring(0, 5);
+    }
+
+    handleEnterKey() {
+        // Determine which action to take based on active type
+        const activeBtn = document.querySelector('.type-btn.active');
+        const type = activeBtn.dataset.type;
+        
+        if (type === 'now') {
+            this.addTodo();
+        } else if (type === 'date') {
+            this.addScheduledReminder();
+        } else if (type === 'recurring') {
+            this.addRecurringReminder();
+        }
+    }
+
+    addScheduledReminder() {
+        const text = this.todoInput.value.trim();
+        if (!text) {
+            alert('Please enter a reminder text');
+            return;
+        }
+        
+        const date = this.scheduledDate.value;
+        const time = this.scheduledTime.value;
+        
+        if (!date || !time) {
+            alert('Please select both date and time');
+            return;
+        }
+        
+        // Create scheduled reminder
+        const scheduledDateTime = new Date(`${date}T${time}`);
+        const now = new Date();
+        
+        if (scheduledDateTime <= now) {
+            alert('Please select a future date and time');
+            return;
+        }
+        
+        const todo = {
+            id: Date.now(),
+            text: text,
+            completed: false,
+            createdAt: now.toISOString(),
+            scheduledFor: scheduledDateTime.toISOString(),
+            type: 'scheduled'
+        };
+        
+        this.todos.push(todo);
+        this.todoInput.value = '';
+        this.saveTodos();
+        this.render();
+        
+        // Clear quick date selection
+        document.querySelectorAll('.quick-date').forEach(btn => btn.classList.remove('selected'));
+        
+        console.log('Scheduled reminder created:', todo);
+    }
+
+    addRecurringReminder() {
+        const text = this.todoInput.value.trim();
+        if (!text) {
+            alert('Please enter a reminder text');
+            return;
+        }
+        
+        const frequency = this.recurringFreq.value;
+        const time = this.recurringTime.value;
+        const startDate = new Date(this.startDate.value);
+        
+        if (frequency === 'weekly' && this.selectedDays.length === 0) {
+            alert('Please select at least one day of the week!');
+            return;
+        }
+        
+        const recurringTask = {
+            id: Date.now(),
+            text: text,
+            completed: false,
+            isRecurring: true,
+            frequency: frequency,
+            time: time,
+            days: frequency === 'weekly' ? [...this.selectedDays] : [],
+            startDate: startDate.toISOString(),
+            nextDue: this.calculateNextDue(frequency, this.selectedDays, startDate, time),
+            createdAt: new Date().toISOString()
+        };
+        
+        this.todos.push(recurringTask);
+        this.todoInput.value = '';
+        this.saveTodos();
+        this.render();
+        
+        // Reset form
+        this.selectedDays = [];
+        this.updateDaySelector();
+        this.setDefaultStartDate();
+        
+        this.showSuccessMessage(`Recurring reminder created! Next: ${this.formatDate(new Date(recurringTask.nextDue))}`);
+    }
+    
+    toggleDay(e) {
+        console.log('toggleDay called', e.target.dataset.day);
+        const day = parseInt(e.target.dataset.day);
+        const index = this.selectedDays.indexOf(day);
+        
+        if (index > -1) {
+            this.selectedDays.splice(index, 1);
+        } else {
+            this.selectedDays.push(day);
+        }
+        
+        console.log('selectedDays:', this.selectedDays);
+        this.updateDayButtons();
+    }
+    
+    updateDayButtons() {
+        console.log('updateDayButtons called, selectedDays:', this.selectedDays);
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            const day = parseInt(btn.dataset.day);
+            if (this.selectedDays.includes(day)) {
+                console.log('Adding selected class to day:', day);
+                btn.classList.add('selected');
+            } else {
+                btn.classList.remove('selected');
+            }
+        });
+    }
+
+    openRecurringModal() {
+        const text = this.todoInput.value.trim();
+        if (text) {
+            this.recurringText.value = text;
+        }
+        this.recurringModal.style.display = 'block';
+    }
     
     saveTodos() {
         localStorage.setItem('todos', JSON.stringify(this.todos));
@@ -361,7 +628,10 @@ class TodoApp {
         this.todoList.innerHTML = '';
         
         const oneTimeTasks = this.todos.filter(todo => {
-            if (!todo.isRecurring) return true;
+            // Handle non-recurring tasks - show ALL of them in the list
+            if (!todo.isRecurring) {
+                return true; // Show all immediate and scheduled tasks
+            }
             
             // Show recurring tasks that are due or completed
             if (todo.isRecurring && todo.completed) return true;
@@ -373,8 +643,23 @@ class TodoApp {
             return false;
         });
         
+        // Sort tasks: immediate tasks first, then by scheduled time
+        oneTimeTasks.sort((a, b) => {
+            // If one has scheduledFor and the other doesn't, prioritize immediate tasks
+            if (a.scheduledFor && !b.scheduledFor) return 1;
+            if (!a.scheduledFor && b.scheduledFor) return -1;
+            
+            // If both are scheduled, sort by time
+            if (a.scheduledFor && b.scheduledFor) {
+                return new Date(a.scheduledFor) - new Date(b.scheduledFor);
+            }
+            
+            // Default sort by creation time
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+        
         if (oneTimeTasks.length === 0) {
-            this.todoList.innerHTML = '<div class="empty-message">No one-time reminders yet.</div>';
+            this.todoList.innerHTML = '<div class="empty-message">No reminders yet.</div>';
         } else {
             oneTimeTasks.forEach(todo => {
                 const todoItem = this.createTodoElement(todo);
@@ -387,16 +672,32 @@ class TodoApp {
         const li = document.createElement('li');
         li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
         
-        let recurringInfo = '';
+        let typeInfo = '';
         if (todo.isRecurring) {
             const nextDue = todo.nextDue ? new Date(todo.nextDue) : null;
             const recurringText = this.getRecurringText(todo);
             
-            recurringInfo = `
+            typeInfo = `
                 <div class="recurring-indicator">
                     ⟳ ${recurringText}
                 </div>
                 ${nextDue && !todo.completed ? `<div class="next-occurrence">Next: ${this.formatDate(nextDue)}</div>` : ''}
+            `;
+        } else if (todo.scheduledFor) {
+            const scheduledDate = new Date(todo.scheduledFor);
+            const now = new Date();
+            const isOverdue = scheduledDate < now && !todo.completed;
+            
+            typeInfo = `
+                <div class="scheduled-indicator ${isOverdue ? 'overdue' : ''}">
+                    📅 ${this.formatScheduledTime(scheduledDate)}
+                </div>
+            `;
+        } else if (todo.type === 'now' || !todo.type) {
+            typeInfo = `
+                <div class="immediate-indicator">
+                    ⚡ Immediate task
+                </div>
             `;
         }
         
@@ -419,7 +720,7 @@ class TodoApp {
         li.innerHTML = `
             <div class="todo-content">
                 <span class="todo-text">${this.escapeHtml(todo.text)}</span>
-                ${recurringInfo}
+                ${typeInfo}
             </div>
             <div class="todo-actions">
                 ${actions}
@@ -428,13 +729,33 @@ class TodoApp {
         
         return li;
     }
+
+    formatScheduledTime(date) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        if (targetDate.getTime() === today.getTime()) {
+            return `Today at ${timeStr}`;
+        } else if (targetDate.getTime() === tomorrow.getTime()) {
+            return `Tomorrow at ${timeStr}`;
+        } else {
+            const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            return `${dateStr} at ${timeStr}`;
+        }
+    }
     
     getRecurringText(todo) {
         if (todo.frequency === 'daily') {
             return 'Daily';
         } else if (todo.frequency === 'weekly') {
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const selectedDays = todo.days.map(day => dayNames[day]).join(', ');
+            // Sort days chronologically (Sunday = 0, Monday = 1, etc.)
+            const sortedDays = [...todo.days].sort((a, b) => a - b);
+            const selectedDays = sortedDays.map(day => dayNames[day]).join(', ');
             return `Weekly on ${selectedDays}`;
         } else if (todo.frequency === 'monthly') {
             return 'Monthly';
@@ -508,20 +829,14 @@ class TodoApp {
     
     setDefaultStartDate() {
         const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        this.startDate.value = tomorrow.toISOString().split('T')[0];
+        this.startDate.value = today.toISOString().split('T')[0];
     }
     
     updateDaySelector() {
         const frequency = this.recurringFreq.value;
         this.daySelector.style.display = frequency === 'weekly' ? 'block' : 'none';
         
-        if (frequency === 'weekly' && this.selectedDays.length === 0) {
-            const today = new Date().getDay();
-            this.selectedDays = [today];
-        }
-        
+        // Don't auto-select any days - let user choose multiple days
         this.updateDayButtons();
     }
     
@@ -626,10 +941,35 @@ class TodoApp {
     completeRecurringTask(id) {
         const todo = this.todos.find(t => t.id === id);
         if (!todo || !todo.isRecurring) return;
-        
+
+        // Check if this task is already completed (prevent double-completion)
+        if (todo.completed) {
+            console.log('Task already completed, skipping duplicate completion');
+            return;
+        }
+
         todo.completed = true;
         todo.completedAt = new Date().toISOString();
-        
+
+        // Check if an uncompleted task with the same pattern already exists
+        const existingActive = this.todos.find(t =>
+            t.id !== id &&
+            t.isRecurring &&
+            !t.completed &&
+            t.text === todo.text &&
+            t.frequency === todo.frequency &&
+            JSON.stringify(t.days) === JSON.stringify(todo.days) &&
+            t.time === todo.time
+        );
+
+        if (existingActive) {
+            console.log('Active recurring task already exists, not creating duplicate');
+            this.saveTodos();
+            this.render();
+            this.showSuccessMessage('Task completed!');
+            return;
+        }
+
         const nextDue = this.calculateNextOccurrence(todo);
         const nextTask = {
             ...todo,
@@ -639,11 +979,11 @@ class TodoApp {
             completedAt: null,
             createdAt: new Date().toISOString()
         };
-        
+
         this.todos.push(nextTask);
         this.saveTodos();
         this.render();
-        
+
         this.showSuccessMessage(`Task completed! Next: ${this.formatDate(nextDue)}`);
     }
     
@@ -935,17 +1275,25 @@ class TodoApp {
             
             reminderText.textContent = nextTask.text;
             
-            if (nextTask.nextDue) {
-                const dueDate = new Date(nextTask.nextDue);
+            // Handle time display for both recurring (nextDue) and scheduled (scheduledFor) tasks
+            const taskTime = nextTask.nextDue || nextTask.scheduledFor;
+            
+            if (taskTime) {
+                const dueDate = new Date(taskTime);
                 const now = new Date();
                 const timeDiff = dueDate.getTime() - now.getTime();
                 
-                reminderTime.textContent = this.formatDate(dueDate);
+                // Use appropriate formatting based on task type
+                if (nextTask.scheduledFor) {
+                    reminderTime.textContent = this.formatScheduledTime(dueDate);
+                } else {
+                    reminderTime.textContent = this.formatDate(dueDate);
+                }
                 
                 if (nextTask.isRecurring) {
                     reminderType.textContent = `⟳ ${this.getRecurringText(nextTask)}`;
                 } else {
-                    reminderType.textContent = 'One-time';
+                    reminderType.textContent = 'Scheduled';
                 }
                 
                 // Apply progressive animation based on timing
@@ -954,17 +1302,20 @@ class TodoApp {
                 reminderCard.classList.add(`level-${animationLevel}`);
                 
                 if (timeDiff <= 0) {
+                    // Task is overdue - calculate overdue level
+                    const overdueMinutes = Math.abs(timeDiff) / (1000 * 60);
+                    const overdueLevel = this.calculateOverdueLevel(overdueMinutes);
                     reminderCard.classList.remove(`level-${animationLevel}`);
-                    reminderCard.classList.add('overdue');
+                    reminderCard.classList.add(`overdue-${overdueLevel}`);
                     this.doneBtn.classList.remove('hidden');
-                } else if (timeDiff <= 300000) { // 5 minutes
+                } else if (timeDiff <= 600000) { // 10 minutes
                     this.doneBtn.classList.remove('hidden');
                 } else {
                     this.doneBtn.classList.add('hidden');
                 }
             } else {
                 reminderTime.textContent = 'No specific time';
-                reminderType.textContent = nextTask.isRecurring ? `⟳ ${this.getRecurringText(nextTask)}` : 'One-time';
+                reminderType.textContent = nextTask.isRecurring ? `⟳ ${this.getRecurringText(nextTask)}` : 'Immediate';
                 reminderCard.className = 'reminder-card level-1';
                 this.doneBtn.classList.remove('hidden'); // Always show for non-timed tasks
             }
@@ -1027,6 +1378,17 @@ class TodoApp {
     }
     
     getNextTaskForToday() {
+        // In test mode, return demo task with simulated overdue time
+        if (this.isTestMode && this.demoTask) {
+            const demoTaskCopy = { ...this.demoTask };
+            // Simulate the task being overdue by the current demo stage minutes
+            const overdueMinutes = this.demoStages[this.demoStage];
+            const scheduledTime = new Date();
+            scheduledTime.setMinutes(scheduledTime.getMinutes() - overdueMinutes);
+            demoTaskCopy.scheduledFor = scheduledTime.toISOString();
+            return demoTaskCopy;
+        }
+        
         const now = new Date();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -1038,12 +1400,22 @@ class TodoApp {
             
             if (todo.isRecurring && todo.nextDue) {
                 const dueDate = new Date(todo.nextDue);
-                // Include tasks due today or overdue
-                return dueDate < tomorrow;
+                // Only show recurring tasks at or after their due time (never before)
+                return dueDate <= now;
             }
             
-            // Include non-recurring tasks
-            return !todo.isRecurring;
+            // Handle non-recurring tasks
+            if (!todo.isRecurring) {
+                // If it has a scheduled time, only show if due
+                if (todo.scheduledFor) {
+                    const scheduledDate = new Date(todo.scheduledFor);
+                    return scheduledDate <= now;
+                }
+                // Show immediate tasks right away
+                return true;
+            }
+            
+            return false;
         });
         
         // Sort by next due date or creation date
@@ -1086,25 +1458,34 @@ class TodoApp {
     
     completeViewerTask() {
         if (!this.currentViewerTask) return;
-        
+
+        // Prevent multiple rapid clicks - check if already completing
+        if (this.isCompletingTask) {
+            console.log('Already completing a task, ignoring click');
+            return;
+        }
+        this.isCompletingTask = true;
+
+        const taskToComplete = this.currentViewerTask;
         const reminderCard = this.nextReminder.querySelector('.reminder-card');
-        
+
         // Add completion animation
         reminderCard.classList.add('completing');
-        
+
         // Complete the task after animation
         setTimeout(() => {
-            if (this.currentViewerTask.isRecurring) {
-                this.completeRecurringTask(this.currentViewerTask.id);
+            if (taskToComplete.isRecurring) {
+                this.completeRecurringTask(taskToComplete.id);
             } else {
-                this.toggleComplete(this.currentViewerTask.id);
+                this.toggleComplete(taskToComplete.id);
             }
-            
+
             // Update viewer content after completion
             setTimeout(() => {
                 reminderCard.classList.remove('completing');
                 this.updateViewerContent();
-                
+                this.isCompletingTask = false; // Allow new completions
+
                 // Add entrance animation to next task
                 const newReminderCard = this.nextReminder.querySelector('.reminder-card');
                 if (newReminderCard && !this.allDoneSection.classList.contains('hidden')) {
@@ -1120,27 +1501,51 @@ class TodoApp {
     }
     
     startTimeUpdate() {
+        this.updateViewerDateTime(); // Initial update
         this.timeInterval = setInterval(() => {
             this.updateViewerContent(); // Refresh task status
+            this.updateViewerDateTime(); // Update date/time display
         }, 1000);
     }
-    
+
     stopTimeUpdate() {
         if (this.timeInterval) {
             clearInterval(this.timeInterval);
             this.timeInterval = null;
         }
     }
+
+    updateViewerDateTime() {
+        const dateTimeElement = document.getElementById('viewerDateTime');
+        if (!dateTimeElement) return;
+
+        const now = new Date();
+        const options = {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        dateTimeElement.textContent = now.toLocaleString('en-US', options);
+    }
     
     calculateAnimationLevel(timeDiff) {
-        // Progressive animation levels based on time remaining
-        if (timeDiff <= 0) return 6; // Overdue
-        if (timeDiff <= 300000) return 6; // 5 minutes - extreme
-        if (timeDiff <= 900000) return 5; // 15 minutes - intense
-        if (timeDiff <= 1800000) return 4; // 30 minutes - moderate-high
-        if (timeDiff <= 3600000) return 3; // 1 hour - moderate
-        if (timeDiff <= 7200000) return 2; // 2 hours - subtle
-        return 1; // More than 2 hours - gentle
+        // Progressive animation levels based on time remaining (not overdue)
+        if (timeDiff <= 600000) return 3; // 10 minutes - more urgent
+        if (timeDiff <= 1800000) return 2; // 30 minutes - moderate
+        return 1; // More than 30 minutes - normal
+    }
+    
+    calculateOverdueLevel(overdueMinutes) {
+        // Progressive overdue animation levels - most extreme at 60+ minutes
+        if (overdueMinutes >= 60) return 6; // 60+ minutes - most extreme (red, intense shaking)
+        if (overdueMinutes >= 50) return 5; // 50-59 minutes
+        if (overdueMinutes >= 40) return 4; // 40-49 minutes  
+        if (overdueMinutes >= 30) return 3; // 30-39 minutes
+        if (overdueMinutes >= 20) return 2; // 20-29 minutes
+        if (overdueMinutes >= 10) return 1; // 10-19 minutes
+        return 0; // 0-9 minutes - minimal overdue styling
     }
     
     // Test Mode Methods
@@ -1159,21 +1564,30 @@ class TodoApp {
         
         // Save original todos
         this.originalTodos = [...this.todos];
-        this.testDayOffset = 0;
         
-        // Clear all tasks to force "all done" state for daily cycling demo
-        this.todos = [];
+        // Create a demo task that simulates overdue progression
+        this.demoTask = {
+            id: 'demo-task',
+            text: 'Take out the bins!',
+            completed: false,
+            isRecurring: false,
+            scheduledFor: new Date().toISOString(), // Due now
+            type: 'scheduled',
+            createdAt: new Date().toISOString()
+        };
         
-        // Start cycling through days every 5 seconds to demonstrate daily changes
+        // Set demo progression stage
+        this.demoStage = 0; // Start at 0 minutes overdue
+        this.demoStages = [0, 10, 20, 30, 40, 50, 60]; // Minutes overdue progression
+        
+        // Start progressing through overdue stages every 5 seconds
         this.testInterval = setInterval(() => {
-            this.testDayOffset = (this.testDayOffset + 1) % 365; // Cycle through year
-            if (this.isViewerMode && this.allDoneSection && !this.allDoneSection.classList.contains('hidden')) {
-                this.updateDailyQuote();
-            }
+            this.demoStage = (this.demoStage + 1) % this.demoStages.length;
+            this.updateViewerContent();
         }, 5000);
         
         this.updateViewerContent();
-        this.showSuccessMessage('Test mode: Daily animals & quotes cycling every 5 seconds!');
+        this.showSuccessMessage('Demo mode: Overdue animation progression every 5 seconds!');
     }
     
     exitTestMode() {
@@ -1181,14 +1595,16 @@ class TodoApp {
         this.testMode.textContent = '🧪';
         this.testMode.style.backgroundColor = 'var(--warning-color)';
         
-        // Clear the cycling interval
+        // Clear the progression interval
         if (this.testInterval) {
             clearInterval(this.testInterval);
             this.testInterval = null;
         }
         
-        // Reset test day offset
-        this.testDayOffset = 0;
+        // Clear demo task and progression
+        this.demoTask = null;
+        this.demoStage = 0;
+        this.demoStages = null;
         
         // Restore original todos
         if (this.originalTodos) {
@@ -1197,7 +1613,7 @@ class TodoApp {
         }
         
         this.updateViewerContent();
-        this.showSuccessMessage('Test mode deactivated. Daily cycling stopped.');
+        this.showSuccessMessage('Demo mode deactivated. Back to normal viewer mode.');
     }
 
 
@@ -1732,6 +2148,11 @@ let todoApp;
 document.addEventListener('DOMContentLoaded', () => {
     todoApp = new TodoApp();
     
-    // Auto-load viewer mode immediately
-    todoApp.enterViewerMode();
+    // Auto-load viewer mode only on desktop (not mobile)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+                  || window.innerWidth <= 768;
+    
+    if (!isMobile) {
+        todoApp.enterViewerMode();
+    }
 });
