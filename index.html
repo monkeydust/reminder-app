@@ -3,7 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remindik</title>
+    <title>Remindik - Smart Weather Reminders</title>
+    
+    <!-- App Icons -->
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512x512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="180x180" href="icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="152x152" href="icon-152x152.png">
+    <link rel="icon" type="image/png" sizes="144x144" href="icon-144x144.png">
+    <link rel="icon" type="image/png" sizes="128x128" href="icon-128x128.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icon-96x96.png">
+    <link rel="icon" type="image/png" sizes="72x72" href="icon-72x72.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="icon-48x48.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="icon-128x128.png">
+    
+    <!-- Android/Chrome -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="background-color" content="#667eea">
+    
+    <!-- Windows -->
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-TileImage" content="icon-144x144.png">
+    
+    <!-- PWA Meta -->
+    <meta name="application-name" content="Remindik">
+    <meta name="apple-mobile-web-app-title" content="Remindik">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,9 +52,58 @@
         </div>
         
         <div class="input-section">
+            <!-- Segmented Control for Reminder Type -->
+            <div class="reminder-type-selector">
+                <button id="nowBtn" class="type-btn active" data-type="now">Now</button>
+                <button id="dateBtn" class="type-btn" data-type="date">Date</button>
+                <button id="recurringBtn" class="type-btn" data-type="recurring">Recurring</button>
+            </div>
+            
             <input type="text" id="todoInput" placeholder="Enter your reminder..." maxlength="200">
-            <button id="addBtn">Once</button>
-            <button id="recurringBtn" class="recurring-btn">⟳ Recurring</button>
+            
+            <!-- Adaptive Controls (Progressive Disclosure) -->
+            <div id="nowControls" class="creation-controls active">
+                <button id="addNowBtn" class="primary-btn">Create Task</button>
+            </div>
+            
+            <div id="dateControls" class="creation-controls">
+                <div class="date-picker-section">
+                    <div class="quick-date-buttons">
+                        <button class="quick-date" data-hours="1">1 Hour</button>
+                        <button class="quick-date" data-date="today">Today</button>
+                        <button class="quick-date" data-date="tomorrow">Tomorrow</button>
+                        <button class="quick-date" data-date="weekend">Weekend</button>
+                    </div>
+                    <div class="datetime-inputs">
+                        <input type="date" id="scheduledDate" class="date-input">
+                        <input type="time" id="scheduledTime" class="time-input">
+                    </div>
+                </div>
+                <button id="addDateBtn" class="primary-btn">Schedule Reminder</button>
+            </div>
+            
+            <div id="recurringControls" class="creation-controls">
+                <div class="recurring-setup-section">
+                    <div class="form-row-compact">
+                        <select id="recurringFreq" class="recurring-select">
+                            <option value="daily">Daily</option>
+                            <option value="weekly" selected>Weekly</option>
+                        </select>
+                        <input type="time" id="recurringTime" class="time-input" value="08:00">
+                        <input type="date" id="startDate" class="date-input">
+                    </div>
+                    <div id="daySelector" class="day-buttons">
+                        <button type="button" class="day-btn" data-day="0">Sun</button>
+                        <button type="button" class="day-btn" data-day="1">Mon</button>
+                        <button type="button" class="day-btn" data-day="2">Tue</button>
+                        <button type="button" class="day-btn" data-day="3">Wed</button>
+                        <button type="button" class="day-btn" data-day="4">Thu</button>
+                        <button type="button" class="day-btn" data-day="5">Fri</button>
+                        <button type="button" class="day-btn" data-day="6">Sat</button>
+                    </div>
+                </div>
+                <button id="addRecurringBtn" class="primary-btn">⟳ Create Pattern</button>
+            </div>
         </div>
         
         <div id="recurringModal" class="modal">
@@ -135,7 +220,10 @@
         
         <div class="stats">
             <span id="todoCount">0 reminders</span>
-            <button id="clearAllBtn">Clear All</button>
+            <div class="button-group">
+                <button id="clearCompletedBtn">Clear Completed</button>
+                <button id="clearAllBtn">Clear All</button>
+            </div>
         </div>
     </div>
     
@@ -143,6 +231,7 @@
     <div id="viewerMode" class="viewer-mode hidden">
         <div class="viewer-container">
             <div class="viewer-header">
+                <div class="viewer-datetime" id="viewerDateTime"></div>
                 <div class="viewer-controls">
                     <button id="fullscreenBtn" class="test-mode-btn" title="Toggle fullscreen">⛶</button>
                     <button id="testMode" class="test-mode-btn" title="Test animation progression">🧪</button>
@@ -192,6 +281,6 @@
         </div>
     </div>
     
-    <script src="script-fixed.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

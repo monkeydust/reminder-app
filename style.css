@@ -97,8 +97,185 @@ h1 {
 
 .input-section {
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+    gap: 15px;
     margin-bottom: 15px;
+}
+
+/* Segmented Control for Reminder Types */
+.reminder-type-selector {
+    display: flex;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 3px;
+    position: relative;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.type-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.type-btn.active {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.type-btn:hover:not(.active) {
+    color: var(--primary-color);
+    background-color: rgba(248,249,250,0.5);
+}
+
+/* Adaptive Controls - Progressive Disclosure */
+.creation-controls {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.creation-controls.active {
+    display: flex;
+}
+
+.primary-btn {
+    padding: 12px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: 500;
+}
+
+.primary-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Date Picker Section */
+.date-picker-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.quick-date-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.quick-date {
+    padding: 6px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6c757d;
+}
+
+.quick-date:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.quick-date.selected {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.datetime-inputs {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.date-input, .time-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #f8f9fa;
+}
+
+.date-input {
+    width: 140px;
+}
+
+.time-input {
+    width: 100px;
+}
+
+/* Reminder Type Indicators */
+.scheduled-indicator, .immediate-indicator {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+    padding: 2px 6px;
+    background-color: #f0f8ff;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+.scheduled-indicator.overdue {
+    background-color: #ffe5e5;
+    color: #d32f2f;
+}
+
+.immediate-indicator {
+    background-color: #fff3e0;
+    color: #f57722;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .reminder-type-selector {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .type-btn {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .quick-date-buttons {
+        justify-content: space-around;
+    }
+    
+    .quick-date {
+        flex: 1;
+        text-align: center;
+        min-width: 60px;
+    }
+    
+    .datetime-inputs {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .date-input, .time-input {
+        width: 100%;
+        max-width: 200px;
+    }
 }
 
 .recurring-btn {
@@ -230,18 +407,21 @@ h1 {
 
 .recurring-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
 }
 
-.edit-recurring-btn {
-    background-color: var(--primary-color);
-    color: white;
+.recurring-actions button {
     padding: 8px 12px;
     border: none;
     border-radius: 3px;
     cursor: pointer;
     font-size: 12px;
     transition: background-color 0.3s;
+}
+
+.edit-recurring-btn {
+    background-color: var(--primary-color);
+    color: white;
 }
 
 .edit-recurring-btn:hover {
@@ -334,7 +514,7 @@ h1 {
     transition: color 0.3s ease;
 }
 
-#clearAllBtn {
+#clearAllBtn, #clearCompletedBtn {
     padding: 8px 16px;
     background-color: var(--warning-color);
     color: white;
@@ -343,10 +523,26 @@ h1 {
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.3s;
+    margin-left: 8px;
 }
 
-#clearAllBtn:hover {
+#clearAllBtn:hover, #clearCompletedBtn:hover {
     background-color: var(--warning-hover);
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: var(--stats-bg);
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.stats .button-group {
+    display: flex;
+    gap: 0;
 }
 
 .empty-message {
@@ -450,19 +646,20 @@ h1 {
 
 .day-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
 }
 
 .day-btn {
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: 2px solid var(--border-color);
     background-color: var(--container-bg);
     color: var(--text-color);
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.3s;
-    font-size: 14px;
+    font-size: 12px;
+    min-width: 36px;
 }
 
 .day-btn:hover {
@@ -669,13 +866,21 @@ h1 {
 
 .viewer-header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     margin-bottom: 40px;
     height: 60px;
     position: relative;
     z-index: 1000;
     pointer-events: auto;
+}
+
+.viewer-datetime {
+    font-size: 1.2em;
+    color: var(--muted-text);
+    font-weight: 500;
+    opacity: 0.7;
+    letter-spacing: 0.5px;
 }
 
 .viewer-controls {
@@ -1393,6 +1598,49 @@ html.viewer-active::-webkit-scrollbar {
     border: 3px solid var(--danger-color);
 }
 
+/* New Progressive Overdue Animation System - 10 minute stages */
+.reminder-card.overdue-0 {
+    animation: gentle-pulse 3s infinite ease-in-out, subtle-glow 4s infinite ease-in-out;
+    border: 2px solid rgba(231, 76, 60, 0.3);
+}
+
+.reminder-card.overdue-1 {
+    animation: moderate-pulse 2.5s infinite ease-in-out, light-shake 4s infinite ease-in-out, moderate-glow 3s infinite ease-in-out;
+    border: 2px solid rgba(231, 76, 60, 0.5);
+}
+
+.reminder-card.overdue-2 {
+    animation: intense-pulse 2s infinite ease-in-out, moderate-shake 3s infinite ease-in-out, intense-glow 2s infinite ease-in-out;
+    border: 3px solid rgba(231, 76, 60, 0.6);
+    background: linear-gradient(45deg, var(--container-bg), rgba(231, 76, 60, 0.05));
+}
+
+.reminder-card.overdue-3 {
+    animation: intense-pulse 1.5s infinite ease-in-out, moderate-shake 2.5s infinite ease-in-out, intense-glow 1.5s infinite ease-in-out;
+    border: 3px solid rgba(231, 76, 60, 0.7);
+    background: linear-gradient(45deg, var(--container-bg), rgba(231, 76, 60, 0.08));
+}
+
+.reminder-card.overdue-4 {
+    animation: intense-pulse 1.2s infinite ease-in-out, intense-shake 2s infinite ease-in-out, intense-glow 1.2s infinite ease-in-out;
+    border: 3px solid rgba(231, 76, 60, 0.8);
+    background: linear-gradient(45deg, var(--container-bg), rgba(231, 76, 60, 0.1));
+}
+
+.reminder-card.overdue-5 {
+    animation: intense-pulse 1s infinite ease-in-out, intense-shake 1.5s infinite ease-in-out, extreme-glow 1s infinite ease-in-out;
+    border: 4px solid rgba(231, 76, 60, 0.9);
+    background: linear-gradient(45deg, var(--container-bg), rgba(231, 76, 60, 0.12));
+}
+
+.reminder-card.overdue-6 {
+    animation: intense-pulse 0.8s infinite ease-in-out, extreme-shake 1s infinite ease-in-out, extreme-glow 0.8s infinite ease-in-out;
+    border: 4px solid var(--danger-color);
+    background: linear-gradient(45deg, var(--container-bg), rgba(231, 76, 60, 0.15));
+    box-shadow: 0 0 40px rgba(231, 76, 60, 0.5);
+}
+
+/* Legacy overdue class - kept for backwards compatibility */
 .reminder-card.overdue {
     animation: intense-pulse 0.5s infinite ease-in-out, extreme-shake 0.8s infinite ease-in-out, extreme-glow 0.5s infinite ease-in-out;
     border: 4px solid var(--danger-color);
@@ -1488,5 +1736,46 @@ html.viewer-active::-webkit-scrollbar {
     .viewer-footer {
         flex-direction: column;
         gap: 20px;
+    }
+}
+
+/* Recurring Form Styles */
+.recurring-setup-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-row-compact {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.recurring-select {
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    color: #000;
+    font-size: 14px;
+}
+
+.recurring-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .form-row-compact {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .recurring-select, .time-input, .date-input {
+        width: 100%;
+        max-width: none;
     }
 }

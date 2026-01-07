@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feel-Like Temperature Sparkline</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .weather-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .weather-box {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e0e6ff;
+            margin-bottom: 20px;
+        }
+
+        .current-weather {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .temperature {
+            font-size: 48px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .condition {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .feels-like {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Sparkline Styles */
+        .sparkline-section {
+            margin-top: 20px;
+            padding: 15px 0;
+            border-top: 1px solid #e0e6ff;
+        }
+
+        .sparkline-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .sparkline-container {
+            height: 30px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+            padding: 5px;
+            overflow: hidden;
+        }
+
+        .sparkline-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .sparkline-path {
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .sparkline-area {
+            opacity: 0.15;
+            stroke: none;
+        }
+
+        .sparkline-dots {
+            r: 2.5;
+            opacity: 0.8;
+        }
+
+        .sparkline-dots:hover {
+            r: 4;
+            opacity: 1;
+        }
+
+        /* Temperature range colors */
+        .temp-hot {
+            stroke: #FF6B6B;
+            fill: #FF6B6B;
+        }
+
+        .temp-warm {
+            stroke: #FF9F43;
+            fill: #FF9F43;
+        }
+
+        .temp-mild {
+            stroke: #26DE81;
+            fill: #26DE81;
+        }
+
+        .temp-cool {
+            stroke: #45AAF2;
+            fill: #45AAF2;
+        }
+
+        .temp-cold {
+            stroke: #5F27CD;
+            fill: #5F27CD;
+        }
+
+        .sparkline-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .weather-container {
+                margin: 10px;
+                padding: 20px;
+            }
+            .temperature {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-container">
+        <h1>🌤️ Weather Dashboard</h1>
+        
+        <div class="weather-box">
+            <!-- Current Weather -->
+            <div class="current-weather">
+                <div class="temperature">23°C</div>
+                <div class="condition">Partly Cloudy</div>
+                <div class="feels-like">Feels like 25°C</div>
+            </div>
+
+            <!-- Feel-Like Temperature Sparkline -->
+            <div class="sparkline-section">
+                <div class="sparkline-label">5-Day Feel-Like Temperature Trend</div>
+                <div class="sparkline-container">
+                    <svg class="sparkline-svg" viewBox="0 0 300 20">
+                        <!-- Background gradient -->
+                        <defs>
+                            <linearGradient id="tempGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:0.1" />
+                                <stop offset="50%" style="stop-color:#26DE81;stop-opacity:0.1" />
+                                <stop offset="100%" style="stop-color:#45AAF2;stop-opacity:0.1" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Area under curve -->
+                        <path id="sparkline-area" class="sparkline-area" fill="url(#tempGradient)"></path>
+                        
+                        <!-- Main sparkline path -->
+                        <path id="sparkline-path" class="sparkline-path"></path>
+                        
+                        <!-- Data points -->
+                        <g id="sparkline-dots"></g>
+                    </svg>
+                    <div class="tooltip" id="tooltip"></div>
+                </div>
+                
+                <div class="sparkline-stats">
+                    <span>Min: <span id="min-temp">13.1°C</span></span>
+                    <span>Avg: <span id="avg-temp">21.2°C</span></span>
+                    <span>Max: <span id="max-temp">29.5°C</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Real MET API data for London (feel-like temperatures)
+        const feelLikeData = [
+            { day: 'Today', max: 29.5, min: 19.6, date: '2025-08-15' },
+            { day: 'Fri', max: 24.4, min: 16.4, date: '2025-08-16' },
+            { day: 'Sat', max: 22.9, min: 13.1, date: '2025-08-17' },
+            { day: 'Sun', max: 23.5, min: 15.8, date: '2025-08-18' },
+            { day: 'Mon', max: 24.6, min: 16.1, date: '2025-08-19' }
+        ];
+
+        function getTemperatureColor(temp) {
+            if (temp >= 28) return '#FF6B6B'; // Hot - Red
+            if (temp >= 24) return '#FF9F43'; // Warm - Orange  
+            if (temp >= 20) return '#26DE81'; // Mild - Green
+            if (temp >= 15) return '#45AAF2'; // Cool - Blue
+            return '#5F27CD'; // Cold - Purple
+        }
+
+        function createSparkline() {
+            const svg = document.querySelector('.sparkline-svg');
+            const pathElement = document.getElementById('sparkline-path');
+            const areaElement = document.getElementById('sparkline-area');
+            const dotsContainer = document.getElementById('sparkline-dots');
+            const tooltip = document.getElementById('tooltip');
+            
+            // Use average of max/min for main trend
+            const avgTemps = feelLikeData.map(d => (d.max + d.min) / 2);
+            const maxTemp = Math.max(...avgTemps);
+            const minTemp = Math.min(...avgTemps);
+            const range = maxTemp - minTemp;
+            
+            // SVG dimensions
+            const width = 300;
+            const height = 20;
+            const padding = 10;
+            const chartWidth = width - (padding * 2);
+            const chartHeight = height - 4;
+            
+            // Create path data
+            let pathData = '';
+            let areaData = '';
+            const points = [];
+            
+            avgTemps.forEach((temp, index) => {
+                const x = padding + (index * (chartWidth / (avgTemps.length - 1)));
+                const y = 2 + chartHeight - ((temp - minTemp) / range) * chartHeight;
+                
+                points.push({ x, y, temp, data: feelLikeData[index] });
+                
+                if (index === 0) {
+                    pathData += `M ${x} ${y}`;
+                    areaData += `M ${x} ${height - 2} L ${x} ${y}`;
+                } else {
+                    pathData += ` L ${x} ${y}`;
+                    areaData += ` L ${x} ${y}`;
+                }
+            });
+            
+            // Close area path
+            areaData += ` L ${points[points.length - 1].x} ${height - 2} Z`;
+            
+            // Apply paths
+            pathElement.setAttribute('d', pathData);
+            areaElement.setAttribute('d', areaData);
+            
+            // Set dynamic color based on overall temperature trend
+            const overallAvg = avgTemps.reduce((sum, temp) => sum + temp, 0) / avgTemps.length;
+            const lineColor = getTemperatureColor(overallAvg);
+            pathElement.style.stroke = lineColor;
+            
+            // Add data points
+            dotsContainer.innerHTML = '';
+            points.forEach((point, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point.x);
+                circle.setAttribute('cy', point.y);
+                circle.setAttribute('r', 2.5);
+                circle.setAttribute('fill', getTemperatureColor(point.temp));
+                circle.classList.add('sparkline-dots');
+                
+                // Add tooltip interaction
+                circle.addEventListener('mouseenter', (e) => {
+                    const rect = svg.getBoundingClientRect();
+                    tooltip.style.opacity = '1';
+                    tooltip.style.left = (point.x + rect.left - 30) + 'px';
+                    tooltip.style.top = (rect.top - 30) + 'px';
+                    tooltip.innerHTML = `
+                        <strong>${point.data.day}</strong><br>
+                        ${point.temp.toFixed(1)}°C feels like<br>
+                        <small>Range: ${point.data.min}° - ${point.data.max}°</small>
+                    `;
+                });
+                
+                circle.addEventListener('mouseleave', () => {
+                    tooltip.style.opacity = '0';
+                });
+                
+                dotsContainer.appendChild(circle);
+            });
+            
+            // Update stats
+            const allTemps = feelLikeData.flatMap(d => [d.min, d.max]);
+            document.getElementById('min-temp').textContent = Math.min(...allTemps).toFixed(1) + '°C';
+            document.getElementById('max-temp').textContent = Math.max(...allTemps).toFixed(1) + '°C';
+            document.getElementById('avg-temp').textContent = (allTemps.reduce((sum, temp) => sum + temp, 0) / allTemps.length).toFixed(1) + '°C';
+        }
+
+        // Initialize sparkline when page loads
+        document.addEventListener('DOMContentLoaded', createSparkline);
+    </script>
+</body>
+</html>

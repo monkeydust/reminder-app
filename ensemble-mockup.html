@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ensemble Variance Mockups - UX Exploration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+        }
+
+        .technique {
+            margin-bottom: 50px;
+            padding: 25px;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .technique h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .forecast-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .day-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            min-width: 120px;
+            position: relative;
+            border: 1px solid #e0e6ff;
+        }
+
+        .day-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .temperature {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        /* 1. Confidence Heat Strips */
+        .heat-strip {
+            height: 3px;
+            border-radius: 2px;
+            margin-top: 8px;
+            position: relative;
+        }
+        .heat-high { background: linear-gradient(90deg, #4CAF50, #8BC34A); }
+        .heat-med { background: linear-gradient(90deg, #FFC107, #FF9800); }
+        .heat-low { background: linear-gradient(90deg, #FF5722, #F44336); }
+
+        /* 2. Micro Violin Plots */
+        .violin-plot {
+            width: 20px;
+            height: 30px;
+            margin: 5px auto;
+            position: relative;
+        }
+        .violin-shape {
+            background: linear-gradient(to right, transparent, #667eea, transparent);
+            border-radius: 50%;
+            position: absolute;
+        }
+        .violin-narrow { width: 8px; left: 6px; }
+        .violin-wide { width: 16px; left: 2px; }
+
+        /* 3. Uncertainty Thermometers */
+        .thermometer {
+            width: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin: 5px auto;
+            position: relative;
+            overflow: hidden;
+        }
+        .thermo-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            border-radius: 3px;
+        }
+        .thermo-high { background: #4CAF50; height: 80%; }
+        .thermo-med { background: #FF9800; height: 60%; }
+        .thermo-low { background: #F44336; height: 40%; }
+
+        /* 4. Weather Icon Transparency */
+        .weather-stack {
+            position: relative;
+            display: inline-block;
+        }
+        .weather-ghost {
+            position: absolute;
+            opacity: 0.3;
+            top: 0;
+            left: 0;
+        }
+
+        /* 5. Dot Density Fields */
+        .dot-field {
+            width: 40px;
+            height: 20px;
+            margin: 10px auto;
+            position: relative;
+        }
+        .density-dot {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #667eea;
+            border-radius: 50%;
+        }
+
+        /* 6. Gradient Temperature Ranges */
+        .temp-gradient {
+            height: 6px;
+            border-radius: 3px;
+            margin: 8px 0;
+        }
+        .gradient-sharp {
+            background: linear-gradient(90deg, #2196F3, #FF5722);
+        }
+        .gradient-blur {
+            background: linear-gradient(90deg, 
+                transparent 0%, #2196F3 20%, #FF5722 80%, transparent 100%);
+            filter: blur(1px);
+        }
+
+        /* 7. Ensemble Sparklines */
+        .sparkline {
+            width: 60px;
+            height: 15px;
+            margin: 5px auto;
+        }
+        .sparkline svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 8. Probability Rings */
+        .prob-rings {
+            position: relative;
+            display: inline-block;
+        }
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .ring-inner { 
+            width: 30px; 
+            height: 30px; 
+            border-color: rgba(76, 175, 80, 0.6);
+        }
+        .ring-outer { 
+            width: 45px; 
+            height: 45px; 
+            border-color: rgba(255, 152, 0, 0.4);
+        }
+
+        /* 9. Heatmap Strips */
+        .heatmap-strip {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: 1px;
+            height: 12px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .heatmap-cell {
+            background: #667eea;
+        }
+        .cell-hot { opacity: 0.9; }
+        .cell-warm { opacity: 0.6; }
+        .cell-cool { opacity: 0.3; }
+
+        /* 10. Confidence Glow */
+        .glow-high {
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        .glow-med {
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.5);
+            border: 1px solid rgba(255, 152, 0, 0.4);
+        }
+        .glow-low {
+            box-shadow: 0 0 25px rgba(244, 67, 54, 0.4);
+            border: 1px solid rgba(244, 67, 54, 0.5);
+        }
+
+        /* 11. Mode Plot Bars */
+        .mode-plot {
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 2px;
+            height: 30px;
+            margin: 10px auto;
+            width: 40px;
+        }
+        .mode-bar {
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+        .mode-bar:hover {
+            transform: scaleY(1.2);
+            opacity: 0.8;
+        }
+
+        /* 12. Temporal Divergence Indicators */
+        .divergence-timeline {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9ff, #e8f2ff);
+            border-radius: 15px;
+            overflow-x: auto;
+        }
+        .timeline-day {
+            text-align: center;
+            min-width: 80px;
+            position: relative;
+        }
+        .divergence-node {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin: 10px auto;
+            position: relative;
+        }
+        .divergence-node.stable {
+            background: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        .divergence-node.split {
+            background: #FF9800;
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.5);
+        }
+        .divergence-node.chaos {
+            background: #F44336;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+            animation: chaosShake 2s infinite;
+        }
+        @keyframes chaosShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+        .split-branch {
+            position: absolute;
+            width: 2px;
+            height: 12px;
+            background: #FF9800;
+            top: 16px;
+            left: 50%;
+            transform-origin: top center;
+        }
+        .split-branch:nth-child(1) { transform: translateX(-50%) rotate(-30deg); }
+        .split-branch:nth-child(2) { transform: translateX(-50%) rotate(0deg); }
+        .split-branch:nth-child(3) { transform: translateX(-50%) rotate(30deg); }
+        
+        .timeline-connector {
+            height: 3px;
+            width: 30px;
+            border-radius: 2px;
+            margin: 0 -10px;
+        }
+        .stable-connector { background: linear-gradient(90deg, #4CAF50, #4CAF50); }
+        .split-connector { background: linear-gradient(90deg, #4CAF50, #FF9800); }
+        .chaos-connector { background: linear-gradient(90deg, #FF9800, #F44336); }
+
+        /* 13. Mini-Spaghetti Mobile */
+        .mini-spaghetti {
+            margin: 8px auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .mini-spaghetti:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .mini-spaghetti svg path {
+            transition: all 0.3s ease;
+        }
+        .mini-spaghetti:hover svg path {
+            stroke-width: 2;
+            opacity: 1 !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .forecast-container {
+                justify-content: center;
+            }
+            .day-card {
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌤️ Ensemble Variance UX Mockups</h1>
+
+        <!-- 1. Confidence Heat Strips -->
+        <div class="technique">
+            <h2>1. 🔥 Confidence Heat Strips</h2>
+            <div class="description">Thin colored bars showing ensemble agreement - bright = confident, faded = uncertain</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="heat-strip heat-high"></div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Tue</div>
+                    <div class="temperature">26°</div>
+                    <div class="heat-strip heat-med"></div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="heat-strip heat-low"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Micro Violin Plots -->
+        <div class="technique">
+            <h2>2. 🎻 Micro Violin Plots</h2>
+            <div class="description">Tiny distribution shapes - wider parts show where more models agree</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="violin-plot">
+                        <div class="violin-shape violin-narrow" style="height: 15px; top: 7px;"></div>
+                    </div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Tue</div>
+                    <div class="temperature">26°</div>
+                    <div class="violin-plot">
+                        <div class="violin-shape violin-wide" style="height: 20px; top: 5px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Uncertainty Thermometers -->
+        <div class="technique">
+            <h2>3. 🌡️ Uncertainty Thermometers</h2>
+            <div class="description">Mini confidence bars - height = certainty level</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="thermometer" style="height: 25px;">
+                        <div class="thermo-fill thermo-high"></div>
+                    </div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Tue</div>
+                    <div class="temperature">26°</div>
+                    <div class="thermometer" style="height: 25px;">
+                        <div class="thermo-fill thermo-med"></div>
+                    </div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="thermometer" style="height: 25px;">
+                        <div class="thermo-fill thermo-low"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Weather Icon Transparency -->
+        <div class="technique">
+            <h2>4. 👻 Weather Icon Transparency</h2>
+            <div class="description">Ghost overlays show alternative weather scenarios</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="weather-stack">
+                        <span style="font-size: 40px;">☀️</span>
+                        <span class="weather-ghost" style="font-size: 40px;">⛅</span>
+                    </div>
+                    <div class="temperature">24°</div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Tue</div>
+                    <div class="weather-stack">
+                        <span style="font-size: 40px;">🌧️</span>
+                        <span class="weather-ghost" style="font-size: 40px;">⛈️</span>
+                    </div>
+                    <div class="temperature">18°</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Dot Density Fields -->
+        <div class="technique">
+            <h2>5. •• Dot Density Fields</h2>
+            <div class="description">More dots = models agree, fewer dots = uncertain</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="dot-field" id="high-density"></div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Tue</div>
+                    <div class="temperature">26°</div>
+                    <div class="dot-field" id="med-density"></div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="dot-field" id="low-density"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Gradient Temperature Ranges -->
+        <div class="technique">
+            <h2>6. 🌈 Gradient Temperature Ranges</h2>
+            <div class="description">Sharp edges = confident bounds, blurred = uncertain</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="temp-gradient gradient-sharp"></div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="temp-gradient gradient-blur"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Ensemble Sparklines -->
+        <div class="technique">
+            <h2>7. 📈 Ensemble Sparklines</h2>
+            <div class="description">Tiny charts showing all 50 model predictions</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="sparkline">
+                        <svg viewBox="0 0 60 15">
+                            <polyline points="0,12 5,10 10,8 15,7 20,6 25,6 30,7 35,8 40,9 45,10 50,11 55,12 60,13"
+                                stroke="#667eea" stroke-width="1" fill="none"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="sparkline">
+                        <svg viewBox="0 0 60 15">
+                            <polyline points="0,2 5,8 10,14 15,3 20,11 25,5 30,13 35,1 40,9 45,15 50,6 55,12 60,7"
+                                stroke="#FF9800" stroke-width="1" fill="none"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. Probability Rings -->
+        <div class="technique">
+            <h2>8. ⭕ Probability Rings</h2>
+            <div class="description">Concentric rings show confidence intervals</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="prob-rings">
+                        <div class="temperature">24°</div>
+                        <div class="ring ring-inner"></div>
+                        <div class="ring ring-outer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. Heatmap Strips -->
+        <div class="technique">
+            <h2>9. 🔥 Heatmap Strips</h2>
+            <div class="description">24-hour confidence heatmap per day</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="heatmap-strip" id="heatmap-1"></div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="heatmap-strip" id="heatmap-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. Confidence Glow -->
+        <div class="technique">
+            <h2>10. ✨ Confidence Glow</h2>
+            <div class="description">Glow intensity shows uncertainty - tight glow = confident</div>
+            <div class="forecast-container">
+                <div class="day-card glow-high">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <small>High Confidence</small>
+                </div>
+                <div class="day-card glow-med">
+                    <div class="day-name">Tue</div>
+                    <div class="temperature">26°</div>
+                    <small>Medium Confidence</small>
+                </div>
+                <div class="day-card glow-low">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <small>Low Confidence</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 11. Mode Plot Bars (Research-Backed) -->
+        <div class="technique">
+            <h2>11. 📊 Mode Plot Bars</h2>
+            <div class="description">IEEE 2024: Shows ensemble clustering distribution - taller bars = more models agree</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="mode-plot">
+                        <div class="mode-bar" style="height: 20px; background: #4CAF50; width: 8px;"></div>
+                        <div class="mode-bar" style="height: 25px; background: #4CAF50; width: 12px;"></div>
+                        <div class="mode-bar" style="height: 15px; background: #4CAF50; width: 6px;"></div>
+                    </div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="mode-plot">
+                        <div class="mode-bar" style="height: 10px; background: #FF9800; width: 6px;"></div>
+                        <div class="mode-bar" style="height: 8px; background: #FF9800; width: 4px;"></div>
+                        <div class="mode-bar" style="height: 12px; background: #FF9800; width: 5px;"></div>
+                        <div class="mode-bar" style="height: 6px; background: #FF9800; width: 3px;"></div>
+                        <div class="mode-bar" style="height: 9px; background: #FF9800; width: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 12. Temporal Divergence Indicators -->
+        <div class="technique">
+            <h2>12. 🌿 Temporal Divergence Indicators</h2>
+            <div class="description">Time-hierarchical clustering: Shows when forecast models start to disagree</div>
+            <div class="forecast-container">
+                <div class="divergence-timeline">
+                    <div class="timeline-day">
+                        <div class="day-name">Mon</div>
+                        <div class="temperature">24°</div>
+                        <div class="divergence-node stable"></div>
+                    </div>
+                    <div class="timeline-connector stable-connector"></div>
+                    <div class="timeline-day">
+                        <div class="day-name">Tue</div>
+                        <div class="temperature">26°</div>
+                        <div class="divergence-node stable"></div>
+                    </div>
+                    <div class="timeline-connector split-connector"></div>
+                    <div class="timeline-day">
+                        <div class="day-name">Wed</div>
+                        <div class="temperature">22°</div>
+                        <div class="divergence-node split">
+                            <div class="split-branch"></div>
+                            <div class="split-branch"></div>
+                            <div class="split-branch"></div>
+                        </div>
+                    </div>
+                    <div class="timeline-connector chaos-connector"></div>
+                    <div class="timeline-day">
+                        <div class="day-name">Thu</div>
+                        <div class="temperature">19°</div>
+                        <div class="divergence-node chaos"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 13. Mini-Spaghetti Mobile -->
+        <div class="technique">
+            <h2>13. 🍝 Mini-Spaghetti Mobile</h2>
+            <div class="description">Hurricane-style forecast adapted for mobile: Touch to highlight model families</div>
+            <div class="forecast-container">
+                <div class="day-card">
+                    <div class="day-name">Mon</div>
+                    <div class="temperature">24°</div>
+                    <div class="mini-spaghetti" id="spaghetti-mon">
+                        <svg viewBox="0 0 40 30" style="width: 40px; height: 30px;">
+                            <!-- Multiple ensemble paths -->
+                            <path d="M2,15 Q10,12 18,14 T36,16" stroke="#4CAF50" stroke-width="1" fill="none" opacity="0.7"/>
+                            <path d="M2,15 Q12,10 20,12 T38,15" stroke="#4CAF50" stroke-width="1" fill="none" opacity="0.7"/>
+                            <path d="M2,15 Q8,18 16,16 T34,18" stroke="#4CAF50" stroke-width="1" fill="none" opacity="0.7"/>
+                            <path d="M2,15 Q14,16 22,15 T40,17" stroke="#4CAF50" stroke-width="1.5" fill="none" opacity="1"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="day-card">
+                    <div class="day-name">Wed</div>
+                    <div class="temperature">22°</div>
+                    <div class="mini-spaghetti" id="spaghetti-wed">
+                        <svg viewBox="0 0 40 30" style="width: 40px; height: 30px;">
+                            <!-- Chaotic ensemble paths -->
+                            <path d="M2,15 Q8,5 16,25 T32,8" stroke="#FF9800" stroke-width="1" fill="none" opacity="0.6"/>
+                            <path d="M2,15 Q12,25 20,5 T36,22" stroke="#FF9800" stroke-width="1" fill="none" opacity="0.6"/>
+                            <path d="M2,15 Q6,20 14,10 T38,28" stroke="#FF9800" stroke-width="1" fill="none" opacity="0.6"/>
+                            <path d="M2,15 Q16,8 24,18 T40,12" stroke="#FF9800" stroke-width="1" fill="none" opacity="0.6"/>
+                            <path d="M2,15 Q10,28 18,2 T34,26" stroke="#FF9800" stroke-width="1" fill="none" opacity="0.6"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Generate dot density patterns
+        function generateDots(containerId, density) {
+            const container = document.getElementById(containerId);
+            const width = 40;
+            const height = 20;
+            
+            for (let i = 0; i < density; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'density-dot';
+                dot.style.left = Math.random() * (width - 2) + 'px';
+                dot.style.top = Math.random() * (height - 2) + 'px';
+                container.appendChild(dot);
+            }
+        }
+
+        generateDots('high-density', 25);
+        generateDots('med-density', 15);
+        generateDots('low-density', 8);
+
+        // Generate heatmap cells
+        function generateHeatmap(containerId, pattern) {
+            const container = document.getElementById(containerId);
+            
+            for (let i = 0; i < 24; i++) {
+                const cell = document.createElement('div');
+                cell.className = `heatmap-cell ${pattern[i % pattern.length]}`;
+                container.appendChild(cell);
+            }
+        }
+
+        generateHeatmap('heatmap-1', ['cell-hot', 'cell-hot', 'cell-warm', 'cell-hot']);
+        generateHeatmap('heatmap-2', ['cell-cool', 'cell-warm', 'cell-cool', 'cell-hot', 'cell-cool']);
+
+        // Add interactivity to mini-spaghetti plots
+        document.querySelectorAll('.mini-spaghetti').forEach(spaghetti => {
+            spaghetti.addEventListener('click', function() {
+                const paths = this.querySelectorAll('path');
+                paths.forEach((path, index) => {
+                    // Highlight path on click
+                    if (index === 0) {
+                        path.style.strokeWidth = '3';
+                        path.style.opacity = '1';
+                        path.style.stroke = '#2196F3';
+                        setTimeout(() => {
+                            path.style.strokeWidth = '1';
+                            path.style.opacity = '0.7';
+                            path.style.stroke = path.getAttribute('stroke');
+                        }, 1500);
+                    }
+                });
+            });
+        });
+
+        // Add tooltips to mode plot bars
+        document.querySelectorAll('.mode-bar').forEach((bar, index) => {
+            bar.title = `Model cluster ${index + 1}: ${Math.round(Math.random() * 15 + 5)} ensemble members`;
+        });
+
+        // Add pulsing animation to divergence nodes on hover
+        document.querySelectorAll('.divergence-node').forEach(node => {
+            node.addEventListener('mouseenter', function() {
+                this.style.animation = 'pulse 1s infinite';
+            });
+            node.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('chaos')) {
+                    this.style.animation = 'none';
+                }
+            });
+        });
+
+        // Add CSS animation for pulse effect
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
